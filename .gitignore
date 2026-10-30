@@ -1,0 +1,8 @@
+# Helm
+*.tgz
+charts/*/charts/
+
+# Editor / OS
+.vscode/*
+.idea/
+.DS_Store

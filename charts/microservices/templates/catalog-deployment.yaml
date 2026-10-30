@@ -1,0 +1,45 @@
+{{- if .Values.catalog.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "microservices.fullname" (dict "root" . "component" "catalog") }}
+  labels:
+    {{- include "microservices.componentLabels" (dict "root" . "component" "catalog") | nindent 4 }}
+spec:
+  replicas: {{ .Values.catalog.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "microservices.componentSelectorLabels" (dict "root" . "component" "catalog") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "microservices.componentSelectorLabels" (dict "root" . "component" "catalog") | nindent 8 }}
+    spec:
+      containers:
+        - name: catalog
+          image: {{ include "microservices.image" (dict "root" . "image" .Values.catalog.image) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.catalog.service.port }}
+          env:
+            - name: ASPNETCORE_URLS
+              value: "http://+:{{ .Values.catalog.service.port }}"
+            - name: RabbitMq__Host
+              value: {{ include "microservices.fullname" (dict "root" . "component" "rabbitmq") }}
+          # /products is a real, read-only route — a probe that hits it
+          # proves the API is actually serving, not just listening.
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.catalog.probePath }}
+              port: {{ .Values.catalog.service.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.catalog.probePath }}
+              port: {{ .Values.catalog.service.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.catalog.resources | nindent 12 }}
+{{- end }}

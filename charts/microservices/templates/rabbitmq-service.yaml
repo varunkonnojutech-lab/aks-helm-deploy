@@ -1,0 +1,19 @@
+{{- if .Values.rabbitmq.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "microservices.fullname" (dict "root" . "component" "rabbitmq") }}
+  labels:
+    {{- include "microservices.componentLabels" (dict "root" . "component" "rabbitmq") | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "microservices.componentSelectorLabels" (dict "root" . "component" "rabbitmq") | nindent 4 }}
+  ports:
+    - name: amqp
+      port: {{ .Values.rabbitmq.service.amqpPort }}
+      targetPort: {{ .Values.rabbitmq.service.amqpPort }}
+    - name: management
+      port: {{ .Values.rabbitmq.service.managementPort }}
+      targetPort: {{ .Values.rabbitmq.service.managementPort }}
+{{- end }}

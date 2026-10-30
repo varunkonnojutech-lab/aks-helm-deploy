@@ -1,0 +1,75 @@
+{{- if .Values.rabbitmq.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "microservices.fullname" (dict "root" . "component" "rabbitmq") }}
+  labels:
+    {{- include "microservices.componentLabels" (dict "root" . "component" "rabbitmq") | nindent 4 }}
+spec:
+  replicas: 1 # A single broker on purpose: clustering is a separate topic
+  selector:
+    matchLabels:
+      {{- include "microservices.componentSelectorLabels" (dict "root" . "component" "rabbitmq") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "microservices.componentSelectorLabels" (dict "root" . "component" "rabbitmq") | nindent 8 }}
+    spec:
+      containers:
+        - name: rabbitmq
+          image: {{ include "microservices.image" (dict "root" . "image" .Values.rabbitmq.image) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.rabbitmq.service.amqpPort }}
+            - containerPort: {{ .Values.rabbitmq.service.managementPort }}
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              {{- if .Values.rabbitmq.auth.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.rabbitmq.auth.existingSecret }}
+                  key: username
+              {{- else }}
+              value: {{ .Values.rabbitmq.auth.username | quote }}
+              {{- end }}
+            - name: RABBITMQ_DEFAULT_PASS
+              {{- if .Values.rabbitmq.auth.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.rabbitmq.auth.existingSecret }}
+                  key: password
+              {{- else }}
+              value: {{ .Values.rabbitmq.auth.password | quote }}
+              {{- end }}
+          volumeMounts:
+            {{- if .Values.rabbitmq.persistence.enabled }}
+            - name: data
+              mountPath: /var/lib/rabbitmq
+            {{- end }}
+      volumes:
+        {{- if .Values.rabbitmq.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "microservices.fullname" (dict "root" . "component" "rabbitmq") }}
+        {{- else }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+---
+{{- if .Values.rabbitmq.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "microservices.fullname" (dict "root" . "component" "rabbitmq") }}
+  labels:
+    {{- include "microservices.componentLabels" (dict "root" . "component" "rabbitmq") | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: {{ .Values.rabbitmq.persistence.size }}
+  {{- if .Values.rabbitmq.persistence.storageClass }}
+  storageClassName: {{ .Values.rabbitmq.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}
+{{- end }}

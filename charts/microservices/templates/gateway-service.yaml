@@ -1,0 +1,15 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "microservices.fullname" (dict "root" . "component" "gateway") }}
+  labels:
+    {{- include "microservices.componentLabels" (dict "root" . "component" "gateway") | nindent 4 }}
+spec:
+  type: {{ .Values.gateway.service.type }}
+  selector:
+    {{- include "microservices.componentSelectorLabels" (dict "root" . "component" "gateway") | nindent 4 }}
+  ports:
+    - port: {{ .Values.gateway.service.port }}
+      targetPort: {{ .Values.gateway.service.targetPort }}
+{{- end }}

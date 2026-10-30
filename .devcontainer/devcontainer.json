@@ -1,0 +1,1 @@
+{"customizations":{"vscode":{"extensions":["ms-kubernetes-tools.vscode-kubernetes-tools"]}},"features":{"ghcr.io/devcontainers/features/azure-cli:1":{},"ghcr.io/devcontainers/features/helm:1":{},"ghcr.io/devcontainers/features/kubectl-helm-minikube:1":{}},"image":"mcr.microsoft.com/devcontainers/base:1-bookworm","name":"aks-helm-deploy"}

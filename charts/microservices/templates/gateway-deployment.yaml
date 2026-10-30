@@ -1,0 +1,56 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "microservices.fullname" (dict "root" . "component" "gateway") }}
+  labels:
+    {{- include "microservices.componentLabels" (dict "root" . "component" "gateway") | nindent 4 }}
+spec:
+  replicas: {{ .Values.gateway.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "microservices.componentSelectorLabels" (dict "root" . "component" "gateway") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "microservices.componentSelectorLabels" (dict "root" . "component" "gateway") | nindent 8 }}
+    spec:
+      containers:
+        - name: gateway
+          image: {{ include "microservices.image" (dict "root" . "image" .Values.gateway.image) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.gateway.service.targetPort }}
+          env:
+            - name: ASPNETCORE_URLS
+              value: "http://+:{{ .Values.gateway.service.targetPort }}"
+            # The chart's Service names are <release>-catalog and
+            # <release>-ordering, but the app's appsettings.json points at
+            # bare "catalog" and "ordering". Environment variables override
+            # appsettings in ASP.NET Core (__ = : in the config key), so
+            # the gateway follows whatever this release is actually named.
+            # Only point at backends that are actually enabled; a disabled
+            # backend's YARP route must be removed from the app config too.
+            {{- if .Values.catalog.enabled }}
+            - name: ReverseProxy__Clusters__catalog-cluster__Destinations__d1__Address
+              value: "http://{{ include "microservices.fullname" (dict "root" . "component" "catalog") }}:{{ .Values.catalog.service.port }}"
+            {{- end }}
+            {{- if .Values.ordering.enabled }}
+            - name: ReverseProxy__Clusters__ordering-cluster__Destinations__d1__Address
+              value: "http://{{ include "microservices.fullname" (dict "root" . "component" "ordering") }}:{{ .Values.ordering.service.port }}"
+            {{- end }}
+          # The gateway proxies; it owns no route, so a TCP probe is the
+          # honest check that the process is up and listening.
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.gateway.service.targetPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.gateway.service.targetPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.gateway.resources | nindent 12 }}
+{{- end }}

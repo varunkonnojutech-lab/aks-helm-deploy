@@ -1,0 +1,15 @@
+{{- if .Values.ordering.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "microservices.fullname" (dict "root" . "component" "ordering") }}
+  labels:
+    {{- include "microservices.componentLabels" (dict "root" . "component" "ordering") | nindent 4 }}
+spec:
+  type: {{ .Values.ordering.service.type }}
+  selector:
+    {{- include "microservices.componentSelectorLabels" (dict "root" . "component" "ordering") | nindent 4 }}
+  ports:
+    - port: {{ .Values.ordering.service.port }}
+      targetPort: {{ .Values.ordering.service.port }}
+{{- end }}

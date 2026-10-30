@@ -1,0 +1,38 @@
+# Development overrides: one replica each, no persistence, tiny resources.
+#   helm install shop ./charts/microservices -f charts/microservices/values-dev.yaml
+
+catalog:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+ordering:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+gateway:
+  replicaCount: 1
+  service:
+    type: ClusterIP
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+rabbitmq:
+  persistence:
+    enabled: false

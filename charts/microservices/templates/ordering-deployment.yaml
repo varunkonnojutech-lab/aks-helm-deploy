@@ -1,0 +1,43 @@
+{{- if .Values.ordering.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "microservices.fullname" (dict "root" . "component" "ordering") }}
+  labels:
+    {{- include "microservices.componentLabels" (dict "root" . "component" "ordering") | nindent 4 }}
+spec:
+  replicas: {{ .Values.ordering.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "microservices.componentSelectorLabels" (dict "root" . "component" "ordering") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "microservices.componentSelectorLabels" (dict "root" . "component" "ordering") | nindent 8 }}
+    spec:
+      containers:
+        - name: ordering
+          image: {{ include "microservices.image" (dict "root" . "image" .Values.ordering.image) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.ordering.service.port }}
+          env:
+            - name: ASPNETCORE_URLS
+              value: "http://+:{{ .Values.ordering.service.port }}"
+            - name: RabbitMq__Host
+              value: {{ include "microservices.fullname" (dict "root" . "component" "rabbitmq") }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.ordering.probePath }}
+              port: {{ .Values.ordering.service.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.ordering.probePath }}
+              port: {{ .Values.ordering.service.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.ordering.resources | nindent 12 }}
+{{- end }}

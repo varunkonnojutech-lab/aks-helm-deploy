@@ -1,0 +1,115 @@
+# Default values for the microservices chart.
+# Override per environment with values-dev.yaml / values-prod.yaml, e.g.:
+#   helm install shop ./charts/microservices -f charts/microservices/values-prod.yaml
+
+global:
+  # Prefix for every image, e.g. "myacr.azurecr.io" after `az acr login`.
+  # Leave empty to use the image names exactly as written below.
+  imageRegistry: ""
+  imagePullPolicy: IfNotPresent
+
+# ---- Catalog API: GET /products, stock updates via RabbitMQ ----------------
+catalog:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: ecommerce/catalog-service
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8080
+  probePath: /products
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+# ---- Ordering API: POST /orders, publishes OrderCreated events --------------
+ordering:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: ecommerce/ordering-service
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8080
+  probePath: /orders
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+# ---- YARP gateway: the only public entry point ------------------------------
+gateway:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: ecommerce/gateway
+    tag: "latest"
+  service:
+    # LoadBalancer gives you a public IP on AKS. Use ClusterIP + Ingress
+    # instead when ingress.enabled is true (see values-prod.yaml).
+    type: LoadBalancer
+    port: 80
+    targetPort: 8080
+  # The gateway has no route of its own (it proxies /catalog and /orders),
+  # so its probes are TCP checks, not HTTP.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+# ---- RabbitMQ: the event bus between Ordering and Catalog -------------------
+rabbitmq:
+  enabled: true
+  image:
+    repository: rabbitmq
+    tag: 3-management
+  auth:
+    username: guest
+    # Plain-text password is fine for local learning. For AKS, create a
+    # Secret and point here instead — never commit a real password.
+    password: guest
+    existingSecret: ""
+  service:
+    amqpPort: 5672
+    managementPort: 15672
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: managed # AKS default StorageClass; "" means cluster default
+
+# ---- Ingress: one hostname in front of the gateway --------------------------
+ingress:
+  enabled: false
+  className: nginx
+  host: shop.example.com
+  tls:
+    enabled: false
+    secretName: shop-tls
+  annotations: {}

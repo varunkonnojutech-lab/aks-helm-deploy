@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.3
+
+      - name: Lint
+        run: helm lint charts/microservices
+
+      - name: Render + validate (default, dev, prod)
+        run: |
+          for values in "" "charts/microservices/values-dev.yaml" "charts/microservices/values-prod.yaml"; do
+            if [ -z "$values" ]; then
+              helm template shop charts/microservices | python3 scripts/validate_templates.py
+            else
+              helm template shop charts/microservices -f "$values" | python3 scripts/validate_templates.py
+            fi
+          done
+
+      - name: Render + validate (components disabled)
+        run: |
+          helm template shop charts/microservices --set catalog.enabled=false | python3 scripts/validate_templates.py
+          helm template shop charts/microservices --set rabbitmq.enabled=false | python3 scripts/validate_templates.py
+
+      - name: Package
+        run: helm package charts/microservices -d /tmp/chartpkg
+
+      - name: Check deploy script syntax
+        run: bash -n scripts/deploy.sh

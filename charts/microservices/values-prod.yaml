@@ -1,0 +1,43 @@
+# Production overrides: three replicas, autoscaling, Ingress + TLS, persistence.
+#   helm install shop ./charts/microservices -f charts/microservices/values-prod.yaml
+# Before installing, set:
+#   - global.imageRegistry to your ACR login server
+#   - ingress.host to your real hostname
+#   - rabbitmq.auth.existingSecret to a Secret holding the RabbitMQ password
+
+global:
+  imageRegistry: myacr.azurecr.io
+
+catalog:
+  replicaCount: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+
+ordering:
+  replicaCount: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+
+gateway:
+  replicaCount: 3
+  service:
+    type: ClusterIP
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+
+rabbitmq:
+  auth:
+    password: "" # Must come from existingSecret in production
+    existingSecret: rabbitmq-auth
+
+ingress:
+  enabled: true
+  host: shop.example.com
+  tls:
+    enabled: true

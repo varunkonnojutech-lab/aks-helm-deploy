@@ -1,0 +1,31 @@
+The {{ .Chart.Name }} chart is installed in namespace {{ .Release.Namespace }}.
+
+{{- if .Values.gateway.enabled }}
+{{- if eq .Values.gateway.service.type "LoadBalancer" }}
+Get the gateway's public IP, then call the APIs through it:
+
+  kubectl get svc {{ include "microservices.fullname" (dict "root" . "component" "gateway") }} -n {{ .Release.Namespace }} -w
+  curl http://<EXTERNAL-IP>/catalog/products
+{{- else if .Values.ingress.enabled }}
+The gateway is reachable at https://{{ .Values.ingress.host }}:
+
+  curl https://{{ .Values.ingress.host }}/catalog/products
+{{- else }}
+Port-forward the gateway and call the APIs through it:
+
+  kubectl port-forward svc/{{ include "microservices.fullname" (dict "root" . "component" "gateway") }} -n {{ .Release.Namespace }} 8080:{{ .Values.gateway.service.port }}
+  curl http://localhost:8080/catalog/products
+{{- end }}
+{{- end }}
+
+Try the full flow: create an order through the gateway and watch the stock drop.
+
+  curl -X POST http://localhost:8080/orders \
+    -H "Content-Type: application/json" \
+    -d '{"productId": 1, "quantity": 2}'
+  curl http://localhost:8080/catalog/products
+
+Upgrade with new values, roll back when a release misbehaves:
+
+  helm upgrade shop ./charts/microservices -f charts/microservices/values-prod.yaml -n {{ .Release.Namespace }}
+  helm rollback shop -n {{ .Release.Namespace }}

@@ -1,0 +1,15 @@
+{{- if .Values.catalog.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "microservices.fullname" (dict "root" . "component" "catalog") }}
+  labels:
+    {{- include "microservices.componentLabels" (dict "root" . "component" "catalog") | nindent 4 }}
+spec:
+  type: {{ .Values.catalog.service.type }}
+  selector:
+    {{- include "microservices.componentSelectorLabels" (dict "root" . "component" "catalog") | nindent 4 }}
+  ports:
+    - port: {{ .Values.catalog.service.port }}
+      targetPort: {{ .Values.catalog.service.port }}
+{{- end }}
